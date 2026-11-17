@@ -5,10 +5,11 @@ CampusOps uses a relational database for event operations. No SQL database imple
 ## Design documents
 
 - [Normalization](../dbms/01_normalization.md) — UNF through BCNF and final relations.
-- [ER diagram](../dbms/02_er_diagram.md) — entities, relationships, assumptions, and Mermaid diagram.
+- [ER diagram](../dbms/02_er_diagram.md) — entities, relationships, assumptions, Mermaid source, and [PNG](../dbms/02_er_diagram.png).
 - [Functional dependencies](../dbms/03_functional_dependencies.md) — keys, dependencies, and BCNF check.
 - [Database design](../dbms/04_database_design.md) — PostgreSQL types, constraints, referential actions, and indexes.
+- [PostgreSQL schema](../dbms/03_schema.sql) — executable table, constraint, trigger, and index definitions.
 
-The normalized design separates users, events, venues, sessions, registrations, session selections, attendance, volunteers, assignments, and certificates. Schema and migrations are intentionally not included in this documentation task.
+The normalized design separates users, events, venues, sessions, registrations, session selections, attendance, volunteers, assignments, and certificates. The SQL file is the initial schema foundation; application migrations and capacity enforcement are not included.
 
-Before implementing the schema, the team should settle the open assumptions recorded in the design docs, especially event-scope validation for session selections/volunteer assignments, allowed role and status values, and certificate lifecycle.
+Review the remaining assumptions recorded in the design docs, especially whether multiple volunteer assignments per volunteer/session and certificate reissue history are required.
