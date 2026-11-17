@@ -112,7 +112,7 @@ BCNF requires every nontrivial determinant to be a superkey. Under the functiona
 
 The association tables have composite candidate keys. Their pair attributes do not independently determine other stored descriptive attributes. `attendance` keeps a surrogate `attendance_id`, but also has the candidate key `(registration_id, session_id)`; that pair determines the check-in facts. `volunteer_assignments` uses `assignment_id` as its key and does not assume a volunteer/session pair is unique, because a volunteer may have multiple distinct tasks for one session unless product rules prohibit it.
 
-The session-registration, attendance, and volunteer-assignment relations also require cross-row event-scope validation: a registration, its selected/check-in session, and a volunteer assignment's session must belong to the same event. Ordinary single-column foreign keys establish that referenced rows exist but do not by themselves prove this equality. Implement this invariant with composite foreign keys that include `event_id` and matching unique keys (accepting the duplicated, derivable event identifier and documenting the BCNF tradeoff), or use database triggers/transactional validation. The relational design below lists the lean normalized columns and marks this implementation decision for review before schema creation. Attendance is additionally constrained to a valid session-registration pair.
+The session-registration, attendance, and volunteer-assignment relations also require cross-row event-scope validation: a registration, its selected/check-in session, and a volunteer assignment's session must belong to the same event. Ordinary single-column foreign keys establish that referenced rows exist but do not by themselves prove this equality. The proposed PostgreSQL schema enforces the invariant with triggers and prevents changing the event ownership of sessions, registrations, or volunteer records after creation. Attendance is additionally constrained to a valid session-registration pair. This preserves the lean normalized columns without copying `event_id` into relationship tables.
 
 ## 7. Functional dependencies
 
@@ -221,5 +221,5 @@ Use `NOT NULL` for required identifiers, ownership references, names, timestamps
 
 1. Confirm venues are reusable, identifiable resources; this document models them as `venues`.
 2. Confirm one certificate record per event registration, even if it is initially ineligible; `registration_id` is unique in `certificates`.
-3. Choose how PostgreSQL will enforce same-event scope for session selections and volunteer assignments (composite scoped foreign keys versus triggers). The lean relations avoid storing derivable `event_id` repeatedly; scope validation must still be guaranteed.
-4. Confirm allowed role/status values, whether multiple assignments by the same volunteer to the same session are valid, and whether a certificate can be reissued (history would require multiple certificate rows and a different key rule).
+3. Review the selected PostgreSQL trigger strategy for same-event scope and immutable event ownership before production use.
+4. Confirm whether multiple assignments by the same volunteer to the same session are valid and whether certificate reissue history is needed (history would require multiple certificate rows and a different key rule).

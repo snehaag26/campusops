@@ -1,6 +1,6 @@
 # CampusOps PostgreSQL Database Design
 
-This document specifies the proposed normalized tables and constraints. It is design documentation only; it does not create a `schema.sql` or application code. Types use PostgreSQL conventions. Select concrete enum vocabularies with the team before implementation.
+This document describes the normalized tables and constraints implemented in [03_schema.sql](03_schema.sql). Types use PostgreSQL conventions. Role and status vocabularies are explicit in that schema and can be revised as product rules are finalized.
 
 ## Tables
 
@@ -17,7 +17,7 @@ This document specifies the proposed normalized tables and constraints. It is de
 | `volunteer_assignments` | `assignment_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY`; `volunteer_id bigint NOT NULL REFERENCES volunteers`; `session_id bigint NOT NULL REFERENCES sessions`; `task text NOT NULL`; `status text NOT NULL CHECK (status IN (...))` |
 | `certificates` | `certificate_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY`; `registration_id bigint NOT NULL UNIQUE REFERENCES registrations`; `eligible boolean NOT NULL DEFAULT false`; `issued_at timestamptz`; `certificate_code text UNIQUE`; check rule: issuance fields are consistently populated when issued and only for eligible records |
 
-`...` in role/status checks denotes a deliberately unresolved allowed-value list, not SQL to copy. Choose the vocabulary before schema creation. `certificate_code` may be NULL until issuance; PostgreSQL's ordinary unique constraint allows multiple NULL values. If records are created only when a certificate is ready to issue, change the lifecycle and constraints accordingly.
+`certificate_code` may be NULL until issuance; PostgreSQL's ordinary unique constraint allows multiple NULL values. The check constraint requires eligibility and both issuance fields to be set together. If records are created only when a certificate is ready to issue, change the lifecycle and constraints accordingly.
 
 ## Referential integrity and delete/update behavior
 
@@ -30,12 +30,9 @@ This document specifies the proposed normalized tables and constraints. It is de
 
 ## Cross-event consistency
 
-The FKs above verify referenced records exist. They do not alone ensure a selected session belongs to the same event as its registration, or that an assignment session is part of the volunteer's event. Before schema implementation, choose one of these enforcement strategies:
+The FKs above verify referenced records exist. They do not alone ensure a selected session belongs to the same event as its registration, or that an assignment session is part of the volunteer's event. `03_schema.sql` uses `BEFORE` triggers to compare the parent event IDs while taking row locks, and prevents changing event ownership on sessions, registrations, and volunteer records after creation. This keeps event IDs out of the relationship rows and avoids redundant determinants.
 
-1. Add `event_id` to the relevant association rows and use composite FKs backed by matching `UNIQUE(id,event_id)` constraints; this repeats a derivable value and should be consciously documented.
-2. Use PostgreSQL constraint triggers to check the event match transactionally.
-
-Attendance's composite FK to `session_registrations` additionally ensures a participant was registered for the session before check-in. Concurrent capacity enforcement must also be designed transactionally; a simple row-level `CHECK` cannot count registrations or check-ins across rows.
+Attendance's composite FK to `session_registrations` additionally ensures a participant was registered for the session before check-in. Concurrent capacity enforcement must also be designed transactionally; a simple row-level `CHECK` cannot count registrations or check-ins across rows. The proposed schema validates nonnegative capacity but does not enforce aggregate usage limits.
 
 ## Index recommendations
 

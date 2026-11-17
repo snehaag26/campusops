@@ -1,5 +1,7 @@
 # CampusOps ER Diagram
 
+![CampusOps entity relationship diagram](02_er_diagram.png)
+
 ## Entities and attributes
 
 | Entity | Attributes | Primary key | Foreign keys / alternate keys |
