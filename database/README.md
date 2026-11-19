@@ -9,6 +9,7 @@ CampusOps uses a relational database for event operations. No SQL database imple
 - [Functional dependencies](../dbms/03_functional_dependencies.md) — keys, dependencies, and BCNF check.
 - [Database design](../dbms/04_database_design.md) — PostgreSQL types, constraints, referential actions, and indexes.
 - [PostgreSQL schema](../dbms/03_schema.sql) — executable table, constraint, trigger, and index definitions.
+- [Query cookbook](../dbms/04_queries.sql) — event operations, registration, attendance, volunteer, and certificate reporting examples.
 
 The normalized design separates users, events, venues, sessions, registrations, session selections, attendance, volunteers, assignments, and certificates. The SQL file is the initial schema foundation; application migrations and capacity enforcement are not included.
 
