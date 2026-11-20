@@ -1,0 +1,66 @@
+import { Router } from 'express';
+import { authenticate, requireRole } from '../auth.js';
+import { withTransaction } from '../db.js';
+
+const router = Router();
+
+function validId(value) {
+  return Number.isSafeInteger(Number(value)) && Number(value) > 0;
+}
+
+// POST /api/attendance/check-in — volunteer, organizer, or admin.
+router.post('/check-in', authenticate, requireRole('volunteer', 'organizer', 'admin'), async (req, res) => {
+  const { qrToken, sessionId } = req.body ?? {};
+  if (typeof qrToken !== 'string' || !qrToken.trim()) return res.status(400).json({ error: 'qrToken required' });
+  if (!validId(sessionId)) return res.status(400).json({ error: 'sessionId required' });
+
+  try {
+    const result = await withTransaction(async (connection) => {
+      const [registrations] = await connection.execute(
+        'SELECT r.id, r.status, u.id AS user_id, u.name AS participant_name FROM registrations r JOIN users u ON u.id = r.user_id WHERE r.qr_token = ? FOR UPDATE',
+        [qrToken.trim()]
+      );
+      const registration = registrations[0];
+      if (!registration) return { status: 404, body: { error: 'QR token not found' } };
+      if (registration.status === 'cancelled') return { status: 409, body: { error: 'Registration is cancelled' } };
+
+      const [sessions] = await connection.execute(
+        'SELECT s.id, s.title, s.start_at, s.end_at FROM sessions s JOIN session_registrations sr ON sr.session_id = s.id WHERE s.id = ? AND sr.registration_id = ?',
+        [sessionId, registration.id]
+      );
+      const session = sessions[0];
+      if (!session) return { status: 409, body: { error: 'Not registered for this session' } };
+
+      const [existing] = await connection.execute(
+        'SELECT id FROM attendance WHERE registration_id = ? AND session_id = ?',
+        [registration.id, session.id]
+      );
+      if (existing[0]) return { status: 409, body: { error: 'Already checked in' } };
+
+      await connection.execute(
+        'INSERT INTO attendance (registration_id, session_id, checked_in_by) VALUES (?, ?, ?)',
+        [registration.id, session.id, req.user.id]
+      );
+      const [attendance] = await connection.execute(
+        'SELECT checked_in_at FROM attendance WHERE registration_id = ? AND session_id = ?',
+        [registration.id, session.id]
+      );
+
+      return {
+        status: 201,
+        body: {
+          participantName: registration.participant_name,
+          sessionTitle: session.title,
+          sessionTime: { startAt: session.start_at, endAt: session.end_at },
+          checkedInAt: attendance[0].checked_in_at
+        }
+      };
+    });
+    return res.status(result.status).json(result.body);
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Already checked in' });
+    throw error;
+  }
+});
+
+export default router;
