@@ -7,7 +7,7 @@ This document describes the normalized tables and constraints implemented in [03
 | Table | Columns and constraints |
 |---|---|
 | `users` | `user_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY`; `name text NOT NULL`; `email text NOT NULL UNIQUE`; `password_hash text NOT NULL`; `role text NOT NULL CHECK (role IN (...))` |
-| `venues` | `venue_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY`; `name text NOT NULL`; `address text NOT NULL` |
+| `venues` | `venue_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY`; `name text NOT NULL`; `address text` |
 | `events` | `event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY`; `title text NOT NULL`; `description text`; `venue_id bigint REFERENCES venues`; `start_at timestamptz NOT NULL`; `end_at timestamptz NOT NULL`; `capacity integer NOT NULL CHECK (capacity >= 0)`; `created_by bigint NOT NULL REFERENCES users`; `CHECK (end_at > start_at)` |
 | `sessions` | `session_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY`; `event_id bigint NOT NULL REFERENCES events`; `title text NOT NULL`; `speaker text`; `start_at timestamptz NOT NULL`; `end_at timestamptz NOT NULL`; `capacity integer NOT NULL CHECK (capacity >= 0)`; `CHECK (end_at > start_at)` |
 | `registrations` | `registration_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY`; `event_id bigint NOT NULL REFERENCES events`; `user_id bigint NOT NULL REFERENCES users`; `qr_token text NOT NULL UNIQUE`; `status text NOT NULL CHECK (status IN (...))`; `registered_at timestamptz NOT NULL DEFAULT now()`; `UNIQUE (event_id,user_id)` |
