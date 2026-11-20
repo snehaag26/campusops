@@ -6,18 +6,28 @@ const router = Router();
 const managers = ['admin', 'organizer'];
 
 function validId(value) {
-  return Number.isInteger(Number(value)) && Number(value) > 0;
+  return Number.isSafeInteger(Number(value)) && Number(value) > 0;
 }
 
 function dateTime(value) {
   if (typeof value !== 'string' || !value.trim()) return null;
-  const date = new Date(value);
+  const input = value.trim();
+  const local = input.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,6})?)?$/);
+  if (local) {
+    const [, year, month, day, hour, minute, second = '00'] = local;
+    const parts = [Number(year), Number(month), Number(day), Number(hour), Number(minute), Number(second)];
+    const date = new Date(Date.UTC(...parts));
+    if (date.getUTCFullYear() !== parts[0] || date.getUTCMonth() + 1 !== parts[1] || date.getUTCDate() !== parts[2]
+      || date.getUTCHours() !== parts[3] || date.getUTCMinutes() !== parts[4] || date.getUTCSeconds() !== parts[5]) return null;
+    return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+  }
+  const date = new Date(input);
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
 function validCapacity(value) {
-  return Number.isInteger(Number(value)) && Number(value) > 0;
+  return Number.isSafeInteger(Number(value)) && Number(value) > 0;
 }
 
 async function canManageEvent(eventId, user) {
@@ -65,6 +75,7 @@ router.post('/', authenticate, requireRole(...managers), async (req, res) => {
   const { eventId, title, speaker = null, startAt, endAt, capacity } = req.body ?? {};
   if (!validId(eventId)) return res.status(400).json({ error: 'eventId required' });
   if (typeof title !== 'string' || !title.trim()) return res.status(400).json({ error: 'title required' });
+  if (speaker !== null && typeof speaker !== 'string') return res.status(400).json({ error: 'speaker must be a string' });
   if (!validCapacity(capacity)) return res.status(400).json({ error: 'capacity must be a positive integer' });
   const start = dateTime(startAt);
   const end = dateTime(endAt);
@@ -88,6 +99,7 @@ router.put('/:id', authenticate, requireRole(...managers), async (req, res) => {
   if (!validId(req.params.id)) return res.status(400).json({ error: 'id must be a positive integer' });
   const { title, speaker = null, startAt, endAt, capacity } = req.body ?? {};
   if (typeof title !== 'string' || !title.trim()) return res.status(400).json({ error: 'title required' });
+  if (speaker !== null && typeof speaker !== 'string') return res.status(400).json({ error: 'speaker must be a string' });
   if (!validCapacity(capacity)) return res.status(400).json({ error: 'capacity must be a positive integer' });
   const start = dateTime(startAt);
   const end = dateTime(endAt);
