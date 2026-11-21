@@ -2,5 +2,7 @@ node_modules/
 .env
 server/.env
 server/.npm-cache/
+frontend/.npm-cache/
+frontend/dist/
 npm-debug.log*
 yarn-debug.log*
