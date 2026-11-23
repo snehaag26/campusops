@@ -1,0 +1,27 @@
+Query 11: Issued certificates for one event, with recipient and registration status.
+PostgreSQL 18.6 | database campusops_query_timing_20261123
+EXPLAIN (VERBOSE, COSTS, SETTINGS, FORMAT TEXT)
+
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Sort  (cost=3.14..3.14 rows=1 width=75)
+   Output: c.certificate_id, c.certificate_code, c.issued_at, u.name, u.email, r.registration_id, r.status
+   Sort Key: c.issued_at DESC
+   ->  Nested Loop  (cost=0.00..3.13 rows=1 width=75)
+         Output: c.certificate_id, c.certificate_code, c.issued_at, u.name, u.email, r.registration_id, r.status
+         Inner Unique: true
+         Join Filter: (r.user_id = u.user_id)
+         ->  Nested Loop  (cost=0.00..2.06 rows=1 width=58)
+               Output: r.registration_id, r.status, r.user_id, c.certificate_id, c.certificate_code, c.issued_at
+               Inner Unique: true
+               Join Filter: (r.registration_id = c.registration_id)
+               ->  Seq Scan on public.certificates c  (cost=0.00..1.01 rows=1 width=40)
+                     Output: c.certificate_id, c.registration_id, c.eligible, c.issued_at, c.certificate_code
+                     Filter: (c.issued_at IS NOT NULL)
+               ->  Seq Scan on public.registrations r  (cost=0.00..1.02 rows=2 width=26)
+                     Output: r.registration_id, r.event_id, r.user_id, r.qr_token, r.status, r.registered_at
+                     Filter: (r.event_id = '1'::bigint)
+         ->  Seq Scan on public.users u  (cost=0.00..1.03 rows=3 width=33)
+               Output: u.user_id, u.name, u.email, u.password_hash, u.role, u.created_at
+(19 rows)
+

@@ -1,0 +1,44 @@
+Query 9: Certificate review report.
+PostgreSQL 18.6 | database campusops_query_timing_20261123
+EXPLAIN (VERBOSE, COSTS, SETTINGS, FORMAT TEXT)
+
+                                                                                     QUERY PLAN                                                                                     
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=4.39..4.39 rows=3 width=50)
+   Output: r.registration_id, u.name, u.email, (count(sr.session_id)), (count(a.attendance_id)), (((count(sr.session_id) > 0) AND (count(a.attendance_id) = count(sr.session_id))))
+   Sort Key: u.name
+   ->  HashAggregate  (cost=4.32..4.36 rows=3 width=50)
+         Output: r.registration_id, u.name, u.email, count(sr.session_id), count(a.attendance_id), ((count(sr.session_id) > 0) AND (count(a.attendance_id) = count(sr.session_id)))
+         Group Key: r.registration_id, u.email
+         ->  Nested Loop Left Join  (cost=3.17..4.29 rows=3 width=49)
+               Output: r.registration_id, u.email, u.name, sr.session_id, a.attendance_id
+               Inner Unique: true
+               Join Filter: ((a.registration_id = sr.registration_id) AND (a.session_id = sr.session_id))
+               ->  Merge Left Join  (cost=3.17..3.22 rows=3 width=49)
+                     Output: r.registration_id, u.name, u.email, sr.session_id, sr.registration_id
+                     Merge Cond: (r.registration_id = sr.registration_id)
+                     ->  Sort  (cost=2.11..2.12 rows=2 width=33)
+                           Output: r.registration_id, u.name, u.email
+                           Sort Key: r.registration_id
+                           ->  Hash Join  (cost=1.05..2.10 rows=2 width=33)
+                                 Output: r.registration_id, u.name, u.email
+                                 Inner Unique: true
+                                 Hash Cond: (u.user_id = r.user_id)
+                                 ->  Seq Scan on public.users u  (cost=0.00..1.03 rows=3 width=33)
+                                       Output: u.user_id, u.name, u.email, u.password_hash, u.role, u.created_at
+                                 ->  Hash  (cost=1.03..1.03 rows=2 width=16)
+                                       Output: r.registration_id, r.user_id
+                                       ->  Seq Scan on public.registrations r  (cost=0.00..1.03 rows=2 width=16)
+                                             Output: r.registration_id, r.user_id
+                                             Filter: ((r.event_id = '1'::bigint) AND (r.status = 'confirmed'::text))
+                     ->  Sort  (cost=1.05..1.06 rows=3 width=16)
+                           Output: sr.session_id, sr.registration_id
+                           Sort Key: sr.registration_id
+                           ->  Seq Scan on public.session_registrations sr  (cost=0.00..1.03 rows=3 width=16)
+                                 Output: sr.session_id, sr.registration_id
+               ->  Materialize  (cost=0.00..1.01 rows=1 width=24)
+                     Output: a.attendance_id, a.registration_id, a.session_id
+                     ->  Seq Scan on public.attendance a  (cost=0.00..1.01 rows=1 width=24)
+                           Output: a.attendance_id, a.registration_id, a.session_id
+(36 rows)
+

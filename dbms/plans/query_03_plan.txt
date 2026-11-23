@@ -1,0 +1,33 @@
+Query 3: Session utilization: selected participants, check-ins, and capacity.
+PostgreSQL 18.6 | database campusops_query_timing_20261123
+EXPLAIN (VERBOSE, COSTS, SETTINGS, FORMAT TEXT)
+
+                                                                                                                                    QUERY PLAN                                                                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=3.26..3.27 rows=2 width=98)
+   Output: s.session_id, s.title, s.start_at, s.end_at, s.capacity, (count(sr.registration_id)), (count(a.attendance_id)), ((s.capacity - count(sr.registration_id))), (round(((100.0 * (count(a.attendance_id))::numeric) / (NULLIF(count(sr.registration_id), 0))::numeric), 1))
+   Sort Key: s.start_at
+   ->  HashAggregate  (cost=3.20..3.25 rows=2 width=98)
+         Output: s.session_id, s.title, s.start_at, s.end_at, s.capacity, count(sr.registration_id), count(a.attendance_id), (s.capacity - count(sr.registration_id)), round(((100.0 * (count(a.attendance_id))::numeric) / (NULLIF(count(sr.registration_id), 0))::numeric), 1)
+         Group Key: s.session_id
+         ->  Nested Loop Left Join  (cost=1.05..3.18 rows=3 width=58)
+               Output: s.session_id, s.title, s.start_at, s.end_at, s.capacity, sr.registration_id, a.attendance_id
+               Inner Unique: true
+               Join Filter: ((a.session_id = sr.session_id) AND (a.registration_id = sr.registration_id))
+               ->  Hash Right Join  (cost=1.05..2.11 rows=3 width=58)
+                     Output: s.session_id, s.title, s.start_at, s.end_at, s.capacity, sr.registration_id, sr.session_id
+                     Inner Unique: true
+                     Hash Cond: (sr.session_id = s.session_id)
+                     ->  Seq Scan on public.session_registrations sr  (cost=0.00..1.03 rows=3 width=16)
+                           Output: sr.session_id, sr.registration_id, sr.selected_at
+                     ->  Hash  (cost=1.02..1.02 rows=2 width=42)
+                           Output: s.session_id, s.title, s.start_at, s.end_at, s.capacity
+                           ->  Seq Scan on public.sessions s  (cost=0.00..1.02 rows=2 width=42)
+                                 Output: s.session_id, s.title, s.start_at, s.end_at, s.capacity
+                                 Filter: (s.event_id = '1'::bigint)
+               ->  Materialize  (cost=0.00..1.01 rows=1 width=24)
+                     Output: a.attendance_id, a.session_id, a.registration_id
+                     ->  Seq Scan on public.attendance a  (cost=0.00..1.01 rows=1 width=24)
+                           Output: a.attendance_id, a.session_id, a.registration_id
+(25 rows)
+

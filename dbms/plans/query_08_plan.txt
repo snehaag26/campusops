@@ -1,0 +1,27 @@
+Query 8: Session staffing coverage, including sessions without assignments.
+PostgreSQL 18.6 | database campusops_query_timing_20261123
+EXPLAIN (VERBOSE, COSTS, SETTINGS, FORMAT TEXT)
+
+                                                                                                 QUERY PLAN                                                                                                  
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=2.14..2.14 rows=2 width=46)
+   Output: s.session_id, s.title, s.start_at, (count(va.assignment_id) FILTER (WHERE (va.status <> 'cancelled'::text))), (count(DISTINCT va.volunteer_id) FILTER (WHERE (va.status <> 'cancelled'::text)))
+   Sort Key: s.start_at
+   ->  GroupAggregate  (cost=2.08..2.13 rows=2 width=46)
+         Output: s.session_id, s.title, s.start_at, count(va.assignment_id) FILTER (WHERE (va.status <> 'cancelled'::text)), count(DISTINCT va.volunteer_id) FILTER (WHERE (va.status <> 'cancelled'::text))
+         Group Key: s.session_id
+         ->  Sort  (cost=2.08..2.08 rows=2 width=55)
+               Output: s.session_id, s.title, s.start_at, va.assignment_id, va.status, va.volunteer_id
+               Sort Key: s.session_id, va.volunteer_id
+               ->  Nested Loop Left Join  (cost=0.00..2.07 rows=2 width=55)
+                     Output: s.session_id, s.title, s.start_at, va.assignment_id, va.status, va.volunteer_id
+                     Join Filter: (va.session_id = s.session_id)
+                     ->  Seq Scan on public.sessions s  (cost=0.00..1.02 rows=2 width=30)
+                           Output: s.session_id, s.event_id, s.title, s.speaker, s.start_at, s.end_at, s.capacity, s.created_at
+                           Filter: (s.event_id = '1'::bigint)
+                     ->  Materialize  (cost=0.00..1.01 rows=1 width=33)
+                           Output: va.assignment_id, va.status, va.volunteer_id, va.session_id
+                           ->  Seq Scan on public.volunteer_assignments va  (cost=0.00..1.01 rows=1 width=33)
+                                 Output: va.assignment_id, va.status, va.volunteer_id, va.session_id
+(19 rows)
+
