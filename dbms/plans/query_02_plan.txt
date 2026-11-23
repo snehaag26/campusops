@@ -1,0 +1,22 @@
+Query 2: Registration roster for an event, including each participant's QR token.
+PostgreSQL 18.6 | database campusops_query_timing_20261123
+EXPLAIN (VERBOSE, COSTS, SETTINGS, FORMAT TEXT)
+
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Sort  (cost=2.11..2.11 rows=2 width=96)
+   Output: r.registration_id, u.user_id, u.name, u.email, r.status, r.registered_at, r.qr_token
+   Sort Key: r.registered_at, u.name
+   ->  Hash Join  (cost=1.05..2.10 rows=2 width=96)
+         Output: r.registration_id, u.user_id, u.name, u.email, r.status, r.registered_at, r.qr_token
+         Inner Unique: true
+         Hash Cond: (u.user_id = r.user_id)
+         ->  Seq Scan on public.users u  (cost=0.00..1.03 rows=3 width=33)
+               Output: u.user_id, u.name, u.email, u.password_hash, u.role, u.created_at
+         ->  Hash  (cost=1.02..1.02 rows=2 width=71)
+               Output: r.registration_id, r.status, r.registered_at, r.qr_token, r.user_id
+               ->  Seq Scan on public.registrations r  (cost=0.00..1.02 rows=2 width=71)
+                     Output: r.registration_id, r.status, r.registered_at, r.qr_token, r.user_id
+                     Filter: (r.event_id = '1'::bigint)
+(14 rows)
+

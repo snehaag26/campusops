@@ -1,0 +1,32 @@
+Query 10: Event analytics: registration, attendance, and event-level no-show counts.
+PostgreSQL 18.6 | database campusops_query_timing_20261123
+EXPLAIN (VERBOSE, COSTS, SETTINGS, FORMAT TEXT)
+
+                                                                                                                                                                                      QUERY PLAN                                                                                                                                                                                       
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ GroupAggregate  (cost=3.09..5.18 rows=1 width=56)
+   Output: e.event_id, e.title, count(DISTINCT r.registration_id), count(DISTINCT r.registration_id) FILTER (WHERE (r.status = 'confirmed'::text)), count(DISTINCT r.registration_id) FILTER (WHERE ((r.status = 'confirmed'::text) AND (a.attendance_id IS NOT NULL))), count(DISTINCT r.registration_id) FILTER (WHERE ((r.status = 'confirmed'::text) AND (NOT EXISTS(SubPlan 1))))
+   ->  Merge Left Join  (cost=3.09..3.11 rows=2 width=50)
+         Output: e.event_id, e.title, r.registration_id, r.status, a.attendance_id
+         Merge Cond: (r.registration_id = a.registration_id)
+         ->  Sort  (cost=2.07..2.07 rows=2 width=42)
+               Output: e.event_id, e.title, r.registration_id, r.status
+               Sort Key: r.registration_id
+               ->  Nested Loop Left Join  (cost=0.00..2.06 rows=2 width=42)
+                     Output: e.event_id, e.title, r.registration_id, r.status
+                     ->  Seq Scan on public.events e  (cost=0.00..1.01 rows=1 width=24)
+                           Output: e.event_id, e.title, e.description, e.venue_id, e.start_at, e.end_at, e.capacity, e.created_by, e.created_at
+                           Filter: (e.event_id = '1'::bigint)
+                     ->  Seq Scan on public.registrations r  (cost=0.00..1.02 rows=2 width=26)
+                           Output: r.registration_id, r.event_id, r.user_id, r.qr_token, r.status, r.registered_at
+                           Filter: (r.event_id = '1'::bigint)
+         ->  Sort  (cost=1.02..1.02 rows=1 width=16)
+               Output: a.attendance_id, a.registration_id
+               Sort Key: a.registration_id
+               ->  Seq Scan on public.attendance a  (cost=0.00..1.01 rows=1 width=16)
+                     Output: a.attendance_id, a.registration_id
+   SubPlan 1
+     ->  Seq Scan on public.attendance no_show_attendance  (cost=0.00..1.01 rows=1 width=0)
+           Filter: (no_show_attendance.registration_id = r.registration_id)
+(24 rows)
+

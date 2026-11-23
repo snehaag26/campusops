@@ -1,0 +1,46 @@
+Query 6: A participant's selected session schedule for one event.
+PostgreSQL 18.6 | database campusops_query_timing_20261123
+EXPLAIN (VERBOSE, COSTS, SETTINGS, FORMAT TEXT)
+
+                                                                                              QUERY PLAN                                                                                               
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=6.31..6.31 rows=2 width=107)
+   Output: u.name, e.title, s.session_id, s.title, s.speaker, s.start_at, s.end_at, (CASE WHEN (a.attendance_id IS NULL) THEN 'not checked in'::text ELSE 'checked in'::text END), a.checked_in_at
+   Sort Key: s.start_at
+   ->  Nested Loop Left Join  (cost=0.00..6.30 rows=2 width=107)
+         Output: u.name, e.title, s.session_id, s.title, s.speaker, s.start_at, s.end_at, CASE WHEN (a.attendance_id IS NULL) THEN 'not checked in'::text ELSE 'checked in'::text END, a.checked_in_at
+         Inner Unique: true
+         Join Filter: ((a.session_id = s.session_id) AND (a.registration_id = r.registration_id))
+         ->  Nested Loop  (cost=0.00..5.25 rows=2 width=75)
+               Output: u.name, r.registration_id, e.title, s.session_id, s.title, s.speaker, s.start_at, s.end_at
+               Inner Unique: true
+               Join Filter: (sr.session_id = s.session_id)
+               ->  Nested Loop  (cost=0.00..4.17 rows=2 width=46)
+                     Output: u.name, r.registration_id, e.title, e.event_id, sr.session_id
+                     Join Filter: (r.registration_id = sr.registration_id)
+                     ->  Nested Loop  (cost=0.00..3.10 rows=1 width=38)
+                           Output: u.name, r.registration_id, e.title, e.event_id
+                           ->  Nested Loop  (cost=0.00..2.08 rows=1 width=22)
+                                 Output: u.name, r.event_id, r.registration_id
+                                 ->  Seq Scan on public.users u  (cost=0.00..1.04 rows=1 width=14)
+                                       Output: u.user_id, u.name, u.email, u.password_hash, u.role, u.created_at
+                                       Filter: (u.user_id = '1'::bigint)
+                                 ->  Seq Scan on public.registrations r  (cost=0.00..1.03 rows=1 width=24)
+                                       Output: r.registration_id, r.event_id, r.user_id, r.qr_token, r.status, r.registered_at
+                                       Filter: ((r.user_id = '1'::bigint) AND (r.event_id = '1'::bigint) AND (r.status = 'confirmed'::text))
+                           ->  Seq Scan on public.events e  (cost=0.00..1.01 rows=1 width=24)
+                                 Output: e.event_id, e.title, e.description, e.venue_id, e.start_at, e.end_at, e.capacity, e.created_by, e.created_at
+                                 Filter: (e.event_id = '1'::bigint)
+                     ->  Seq Scan on public.session_registrations sr  (cost=0.00..1.03 rows=3 width=16)
+                           Output: sr.session_id, sr.registration_id, sr.selected_at
+               ->  Materialize  (cost=0.00..1.03 rows=2 width=53)
+                     Output: s.session_id, s.title, s.speaker, s.start_at, s.end_at, s.event_id
+                     ->  Seq Scan on public.sessions s  (cost=0.00..1.02 rows=2 width=53)
+                           Output: s.session_id, s.title, s.speaker, s.start_at, s.end_at, s.event_id
+                           Filter: (s.event_id = '1'::bigint)
+         ->  Materialize  (cost=0.00..1.01 rows=1 width=32)
+               Output: a.attendance_id, a.checked_in_at, a.session_id, a.registration_id
+               ->  Seq Scan on public.attendance a  (cost=0.00..1.01 rows=1 width=32)
+                     Output: a.attendance_id, a.checked_in_at, a.session_id, a.registration_id
+(38 rows)
+
